@@ -1,0 +1,18 @@
+# Edge proxy: terminates TLS (automatic certificates), redirects HTTP to HTTPS and forwards everything to the web container.
+# The API, PostgreSQL and the backup job are never exposed to the internet: they live on the internal network only.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN:localhost} {
+	# The live notification stream (Server-Sent Events) must never be compressed or held back: events have to arrive as they happen.
+	@compressible not path /api/v1/notifications/stream
+	encode @compressible zstd gzip
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+	}
+	reverse_proxy web:3000 {
+		flush_interval -1
+	}
+}

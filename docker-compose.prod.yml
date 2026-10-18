@@ -1,0 +1,177 @@
+# Production stack. Usage:
+#   cp .env.production.example .env.production   # then fill in every value
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Only the proxy publishes ports. PostgreSQL, the API and the backup job stay on the internal network.
+name: habita
+
+x-api-env: &api-env
+  ASPNETCORE_ENVIRONMENT: Production
+  ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-habita};Username=${POSTGRES_USER:-habita};Password=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD}"
+  Web__BaseUrl: "${PUBLIC_ORIGIN:-https://${DOMAIN:?define DOMAIN}}"
+  Security__AllowedOrigins: "${PUBLIC_ORIGIN:-https://${DOMAIN}}"
+  AllowedHosts: "${DOMAIN};api;localhost"
+  Smtp__Host: "${SMTP_HOST:?define SMTP_HOST}"
+  Smtp__Port: "${SMTP_PORT:-587}"
+  Smtp__EnableSsl: "${SMTP_SSL:-true}"
+  Smtp__User: "${SMTP_USER:-}"
+  Smtp__Password: "${SMTP_PASSWORD:-}"
+  Smtp__From: "${SMTP_FROM:-no-reply@${DOMAIN}}"
+  DataProtection__KeysPath: /keys
+  Storage__Root: /data/files
+  Pdf__GotenbergUrl: http://gotenberg:3000
+  # Optional device notifications (Web Push). Generate the pair with:  docker compose ... run --rm migrate --generate-vapid
+  Push__VapidPublicKey: "${VAPID_PUBLIC_KEY:-}"
+  Push__VapidPrivateKey: "${VAPID_PRIVATE_KEY:-}"
+  Push__Subject: "${VAPID_SUBJECT:-mailto:no-reply@${DOMAIN}}"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-habita}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-habita}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-habita} -d ${POSTGRES_DB:-habita}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+
+  # One-off job: applies EF Core migrations and exits. The API starts only after it succeeds.
+  migrate:
+    build: { context: ., dockerfile: src/Habita.Api/Dockerfile }
+    command: ["--migrate"]
+    environment: *api-env
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
+    networks: [internal]
+
+  api:
+    build: { context: ., dockerfile: src/Habita.Api/Dockerfile }
+    restart: unless-stopped
+    environment: *api-env
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    volumes: [dpkeys:/keys, files:/data/files]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # The aspnet image has no curl: open a TCP connection and read the status line.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && head -n1 <&3 | grep -q 200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [internal, egress]
+
+  # PDF service for contracts and receipts. Internal network only: no route to the internet and no published port, so a hostile document cannot make it
+  # fetch anything. The API hands it files it has already filled in; it never holds data of its own.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    command: ["gotenberg", "--chromium-disable-javascript=true", "--api-timeout=90s"]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks: [internal]
+
+  # Background worker: the daily reminders (once per organization per local day) and the delivery of email and push copies of notifications.
+  # Several copies can run at once; database locks keep them from repeating each other's work. It needs the internet (SMTP and push services),
+  # so it joins the egress network, which holds nothing else and publishes no ports.
+  worker:
+    build: { context: ., dockerfile: src/Habita.Worker/Dockerfile }
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      DOTNET_ENVIRONMENT: Production
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # Unhealthy when neither loop has finished a cycle in the last three minutes.
+      test: ["CMD-SHELL", "test -n \"$$(find /tmp/habita-worker-alive -mmin -3 2>/dev/null)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks: [internal, egress]
+
+  web:
+    build: { context: ./web, args: { API_URL: "http://api:8080" } }
+    restart: unless-stopped
+    depends_on: { api: { condition: service_healthy } }
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [internal, edge]
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?define ACME_EMAIL (certificate expiry notices)}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: { web: { condition: service_healthy } }
+    networks: [edge]
+
+  # Automatic backups: a dump every BACKUP_INTERVAL_HOURS, old ones pruned, and a weekly restore test into a scratch database.
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    entrypoint: ["bash", "/ops/backup-loop.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-habita}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-habita}
+      BACKUP_DIR: /backups
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      FILES_DIR: /data/files
+    volumes:
+      - ./ops:/ops:ro
+      - files:/data/files:ro   # the uploaded files are backed up with the database
+      - ${BACKUP_PATH:-./backups}:/backups
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      # Unhealthy when no dump has been written within two backup intervals.
+      test: ["CMD-SHELL", "test -n \"$$(find /backups -maxdepth 1 -name '*.dump' -mmin -$$((BACKUP_INTERVAL_HOURS * 120)) | head -n1)\""]
+      interval: 1h
+      start_period: 15m
+      retries: 1
+    networks: [internal]
+
+volumes:
+  pgdata:
+  files: # private uploads (payment proofs); included in the backup (the `backup` service mounts it read-only)
+  dpkeys:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    internal: true # no route to the internet: the database and API cannot be reached from outside
+  edge: {}
+  egress: {} # outbound only (mail and push services); no published ports, no other service attached except those that must send

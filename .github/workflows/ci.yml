@@ -1,0 +1,41 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 10.0.x }
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release --no-build
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: web/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint && pnpm exec tsc --noEmit && pnpm build
+  ops:
+    runs-on: ubuntu-latest
+    env:
+      DOMAIN: habita.example.com
+      ACME_EMAIL: admin@example.com
+      POSTGRES_PASSWORD: ci-only-password
+      SMTP_HOST: smtp.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell scripts are valid
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck -S warning ops/*.sh
+      - name: Production compose file is valid
+        run: docker compose -f docker-compose.prod.yml config --quiet
+      - name: Production images build
+        run: |
+          docker build -f src/Habita.Api/Dockerfile -t habita-api .
+          docker build -f src/Habita.Worker/Dockerfile -t habita-worker .
+          docker build -t habita-web ./web

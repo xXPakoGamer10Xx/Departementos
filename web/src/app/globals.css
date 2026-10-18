@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* Talonario: papel frío, hojas blancas, tinta azul de copia al carbón. */
+@theme inline {
+  --color-paper: #f2f4f3;
+  --color-paper-deep: #e8ecea;
+  --color-leaf: #ffffff;
+  --color-ink: #13202b;
+  --color-ink-soft: #46555f;
+  --color-ink-faint: #5d6c76;
+  --color-rule: #d5dfdb;
+  --color-rule-strong: #b6c5bf;
+  --color-accent: #1d3fb8;
+  --color-accent-hover: #162f8c;
+  --color-accent-soft: #e8edfb;
+  --color-stamp: #b3261e;
+  --color-stamp-soft: #fbeae8;
+  --color-ledger: #1b6b4a;
+  --color-ledger-soft: #e4f2ea;
+  --color-pending: #855400;
+  --color-pending-soft: #fbf0d9;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Piezas del navegador que también llevan el diseño. */
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+input,
+textarea,
+select {
+  caret-color: var(--color-accent);
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-rule-strong) transparent;
+}
+a {
+  text-underline-offset: 3px;
+}
+
+/* Perforación entre el encabezado de una hoja y su cuerpo. */
+.perforation {
+  position: relative;
+  height: 0;
+  border-top: 2px dotted var(--color-rule-strong);
+}
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+}
+.perforation::before {
+  left: -10px;
+  clip-path: inset(-1px -1px -1px 50%);
+}
+.perforation::after {
+  right: -10px;
+  clip-path: inset(-1px 50% -1px -1px);
+}
+
+@keyframes habita-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-paper-deep) 25%, #f4f6f5 50%, var(--color-paper-deep) 75%);
+  background-size: 200% 100%;
+  animation: habita-shimmer 1.4s linear infinite;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}

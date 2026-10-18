@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-habita}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-habita}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  # Turns contracts (Word) and receipts (HTML) into PDF. Development only exposes it on localhost; in production it lives on the internal network.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    ports: ["127.0.0.1:${GOTENBERG_PORT:-3010}:3000"]
+  mailpit:
+    image: axllent/mailpit
+    ports: ["1025:1025", "8025:8025"]
+volumes:
+  pgdata:

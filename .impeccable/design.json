@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T05:19:17.471806+00:00",
+  "title": "Design System: Habita",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Cool Paper",
+        "canonical": "#f2f4f3",
+        "tonalRamp": [
+          "#212221",
+          "#393b3a",
+          "#545655",
+          "#707271",
+          "#8e908f",
+          "#acaead",
+          "#cccecd",
+          "#edefee"
+        ]
+      },
+      "paper-deep": {
+        "role": "neutral",
+        "displayName": "Deep Paper",
+        "canonical": "#e8ecea",
+        "tonalRamp": [
+          "#1f2221",
+          "#383b3a",
+          "#535654",
+          "#6f7271",
+          "#8c908e",
+          "#abafad",
+          "#cbcfcd",
+          "#ebefed"
+        ]
+      },
+      "leaf": {
+        "role": "neutral",
+        "displayName": "Leaf White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#717171",
+          "#8f8f8f",
+          "#aeaeae",
+          "#cecece",
+          "#eeeeee"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ledger Ink",
+        "canonical": "#13202b",
+        "tonalRamp": [
+          "#16232e",
+          "#2e3c48",
+          "#495764",
+          "#647481",
+          "#8191a0",
+          "#a0b0bf",
+          "#bfd0df",
+          "#e2f1fe"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#46555f",
+        "tonalRamp": [
+          "#16242c",
+          "#2e3d46",
+          "#495862",
+          "#64747f",
+          "#81929d",
+          "#a0b1bc",
+          "#bfd1dc",
+          "#e0f1fe"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "#5d6c76",
+        "tonalRamp": [
+          "#16232c",
+          "#2f3d46",
+          "#495861",
+          "#65747e",
+          "#82929c",
+          "#a0b1bc",
+          "#c0d1dc",
+          "#e0f1fd"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Ledger Rule",
+        "canonical": "#d5dfdb",
+        "tonalRamp": [
+          "#1c2421",
+          "#353d39",
+          "#4f5854",
+          "#6b7470",
+          "#88928e",
+          "#a7b0ad",
+          "#c6d0cc",
+          "#e7f1ed"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "#b6c5bf",
+        "tonalRamp": [
+          "#192520",
+          "#313e39",
+          "#4c5954",
+          "#677570",
+          "#85938d",
+          "#a3b2ac",
+          "#c3d2cc",
+          "#e3f3ec"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Carbon-Copy Blue",
+        "canonical": "#1d3fb8",
+        "tonalRamp": [
+          "#04046e",
+          "#0c239d",
+          "#2245be",
+          "#3b65e1",
+          "#5b87fb",
+          "#8bacf9",
+          "#b8cefd",
+          "#e7effe"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Pressed Carbon Blue",
+        "canonical": "#162f8c",
+        "tonalRamp": [
+          "#05096b",
+          "#152d8a",
+          "#2c4cab",
+          "#476acc",
+          "#6289ee",
+          "#8aabfc",
+          "#b9cdfb",
+          "#e7efff"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#e8edfb",
+        "tonalRamp": [
+          "#1e212b",
+          "#363a45",
+          "#515561",
+          "#6d717d",
+          "#8a8f9c",
+          "#a9aebb",
+          "#c9cddb",
+          "#e9eefc"
+        ]
+      },
+      "stamp": {
+        "role": "tertiary",
+        "displayName": "Stamp Red",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "#460202",
+          "#720505",
+          "#a10c0a",
+          "#c4382e",
+          "#e85a4c",
+          "#ff8576",
+          "#fdbbb1",
+          "#fee9e5"
+        ]
+      },
+      "stamp-soft": {
+        "role": "tertiary",
+        "displayName": "Stamp Wash",
+        "canonical": "#fbeae8",
+        "tonalRamp": [
+          "#2a1e1d",
+          "#443735",
+          "#5f5150",
+          "#7c6e6c",
+          "#9a8b89",
+          "#baaaa8",
+          "#dac9c7",
+          "#fbeae8"
+        ]
+      },
+      "ledger": {
+        "role": "secondary",
+        "displayName": "Ledger Green",
+        "canonical": "#1b6b4a",
+        "tonalRamp": [
+          "#002a19",
+          "#09462e",
+          "#126544",
+          "#378260",
+          "#56a17d",
+          "#76c19b",
+          "#95e1ba",
+          "#c4fedf"
+        ]
+      },
+      "ledger-soft": {
+        "role": "secondary",
+        "displayName": "Ledger Wash",
+        "canonical": "#e4f2ea",
+        "tonalRamp": [
+          "#1a241f",
+          "#323e37",
+          "#4d5952",
+          "#69756e",
+          "#86938c",
+          "#a4b2aa",
+          "#c4d2ca",
+          "#e5f3eb"
+        ]
+      },
+      "pending": {
+        "role": "secondary",
+        "displayName": "Pending Amber",
+        "canonical": "#855400",
+        "tonalRamp": [
+          "#321c00",
+          "#533200",
+          "#764a00",
+          "#98661f",
+          "#b88340",
+          "#d8a260",
+          "#fac27f",
+          "#feebd5"
+        ]
+      },
+      "pending-soft": {
+        "role": "secondary",
+        "displayName": "Amber Wash",
+        "canonical": "#fbf0d9",
+        "tonalRamp": [
+          "#29200f",
+          "#423927",
+          "#5d5441",
+          "#7a705c",
+          "#988e79",
+          "#b7ad97",
+          "#d7cdb6",
+          "#f8edd6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de página."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Título de hoja de autenticación."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto general."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Etiquetas, botones y navegación."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Ayudas y datos secundarios."
+      },
+      "folio": {
+        "displayName": "Folio",
+        "purpose": "Folios e identificadores en Geist Mono."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms ease (transition-colors)",
+        "purpose": "Hover y foco de controles."
+      },
+      {
+        "name": "shimmer",
+        "value": "1.4s linear infinite",
+        "purpose": "Skeleton de carga; se apaga con prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "sm",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de una hoja o formulario.",
+      "html": "<button class=\"ds-btn-primary\">Entrar</button>",
+      "css": ".ds-btn-primary{height:40px;padding:0 16px;border-radius:6px;border:1px solid transparent;background:#1d3fb8;color:#fff;font:500 14px/1 sans-serif;transition:background-color .15s}.ds-btn-primary:hover{background:#162f8c}.ds-btn-primary:focus-visible{outline:2px solid #1d3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción secundaria.",
+      "html": "<button class=\"ds-btn-secondary\">Reactivar</button>",
+      "css": ".ds-btn-secondary{height:40px;padding:0 16px;border-radius:6px;border:1px solid #b6c5bf;background:#fff;color:#13202b;font:500 14px/1 sans-serif}.ds-btn-secondary:hover{background:#f2f4f3}.ds-btn-secondary:focus-visible{outline:2px solid #1d3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Acción destructiva o de desactivación.",
+      "html": "<button class=\"ds-btn-danger\">Desactivar</button>",
+      "css": ".ds-btn-danger{height:32px;padding:0 12px;border-radius:6px;border:1px solid #b6c5bf;background:#fff;color:#b3261e;font:500 13px/1 sans-serif}.ds-btn-danger:hover{background:#fbeae8}.ds-btn-danger:focus-visible{outline:2px solid #1d3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto con etiqueta.",
+      "html": "<label class=\"ds-field\"><span>Correo electrónico</span><input type=\"email\" placeholder=\"nombre@empresa.com\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;font:500 14px sans-serif;color:#13202b}.ds-field input{height:40px;padding:0 12px;border:1px solid #b6c5bf;border-radius:6px;background:#fff;font:400 14px sans-serif;color:#13202b}.ds-field input::placeholder{color:#5d6c76}.ds-field input:hover{border-color:#5d6c76}.ds-field input:focus-visible{outline:2px solid #1d3fb8;outline-offset:2px;border-color:#1d3fb8}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-active",
+      "description": "Estado de un registro.",
+      "html": "<span class=\"ds-badge\">Activo</span>",
+      "css": ".ds-badge{display:inline-flex;padding:2px 8px;border-radius:4px;background:#e4f2ea;color:#1b6b4a;font:500 12px/1.4 sans-serif}"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Elemento activo del riel lateral.",
+      "html": "<a class=\"ds-nav\" href=\"#\">Miembros</a>",
+      "css": ".ds-nav{display:flex;align-items:center;height:36px;padding:0 10px;border-radius:6px;background:#fff;color:#1d3fb8;font:500 14px sans-serif;text-decoration:none;box-shadow:0 0 0 1px #d5dfdb}.ds-nav:focus-visible{outline:2px solid #1d3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Perforated Leaf",
+      "kind": "card",
+      "refersTo": "leaf",
+      "description": "Hoja con encabezado y cuerpo separados por perforación (firma del sistema).",
+      "html": "<section class=\"ds-leaf\"><header><h3>Iniciar sesión</h3><p>Entra a tu organización.</p></header><div class=\"ds-perf\"></div><div class=\"ds-body\">Contenido de la hoja</div></section>",
+      "css": ".ds-leaf{width:320px;border:1px solid #d5dfdb;border-radius:8px;background:#fff;font-family:sans-serif;color:#13202b}.ds-leaf header{padding:24px 24px 20px}.ds-leaf h3{margin:0;font:600 20px/1.3 sans-serif;letter-spacing:-.025em}.ds-leaf p{margin:6px 0 0;font-size:14px;color:#46555f}.ds-perf{position:relative;height:0;border-top:2px dotted #b6c5bf}.ds-perf:before,.ds-perf:after{content:'';position:absolute;top:-10px;width:18px;height:18px;border-radius:9999px;background:#f2f4f3;border:1px solid #d5dfdb}.ds-perf:before{left:-10px;clip-path:inset(-1px -1px -1px 50%)}.ds-perf:after{right:-10px;clip-path:inset(-1px 50% -1px -1px)}.ds-body{padding:20px 24px 24px;font-size:14px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "El talonario",
+    "overview": "Habita se ve como un talonario de recibos bien llevado: hojas blancas sobre papel frío, renglones finos, folios y números tabulares. Un solo azul de acción, sin sombras; la perforación es la firma.",
+    "keyCharacteristics": [
+      "Tema claro único",
+      "Hojas blancas con borde de 1px y sin sombras",
+      "Perforación punteada como firma",
+      "Geist; Geist Mono solo para folios",
+      "Un acento; rojo, verde y ámbar solo como estado"
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Rule",
+        "body": "El azul aparece solo en acciones, navegación activa, foco y selección.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamp Only Rule",
+        "body": "El rojo significa error o reverso, nunca énfasis.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Toda cifra es tabular y los importes se alinean a la derecha.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Leaf Rule",
+        "body": "Ninguna hoja proyecta sombra; se separa con renglones o perforaciones.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar Carbon-Copy Blue solo para acciones, navegación activa y foco.",
+      "Do separar con renglones de 1px y perforaciones, no con sombras.",
+      "Do dar a cada pantalla estados de carga, vacío, error y éxito."
+    ],
+    "donts": [
+      "Don't usar tarjetas de icono + título + texto como estructura de página.",
+      "Don't usar rojo para enfatizar.",
+      "Don't introducir tema oscuro ni degradados decorativos.",
+      "Don't usar azul en etiquetas de rol, avatares o datos."
+    ]
+  }
+}
