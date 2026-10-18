@@ -115,7 +115,7 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
 
     async Task<World> NewWorld(string tag)
     {
-        fx.Clock.Now = DateTimeOffset.UtcNow; fx.Email.FailFor = null; fx.Push.Enabled = true; fx.Push.Outcome = _ => PushOutcome.Sent;
+        fx.Clock.Now = Micros(DateTimeOffset.UtcNow); fx.Email.FailFor = null; fx.Push.Enabled = true; fx.Push.Outcome = _ => PushOutcome.Sent;
         var (owner, orgId, ownerEmail) = await fx.RegisterAsync(tag);
         var pid = (await Json(await owner.PostAsJsonAsync("/api/v1/properties", new { name = "Torre Norte", address = "Reforma 100" }))).GetProperty("id").GetGuid();
         var ta = await NewTenant(owner, "Ana Ejemplo"); var tb = await NewTenant(owner, "Luis Prueba");
@@ -490,7 +490,7 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
     public async Task A_tenant_without_a_login_still_lets_staff_know_and_nothing_fails()
     {
         var (owner, orgId, _) = await fx.RegisterAsync("remnologin");
-        fx.Clock.Now = DateTimeOffset.UtcNow;
+        fx.Clock.Now = Micros(DateTimeOffset.UtcNow);
         var pid = (await Json(await owner.PostAsJsonAsync("/api/v1/properties", new { name = "Casa", address = "x" }))).GetProperty("id").GetGuid();
         var t = await NewTenant(owner, "Sin Acceso Pérez"); var lease = await Lease(owner, pid, t);
         await Charge(owner, lease, 500m, Today.AddDays(-1), "Atrasada");
@@ -564,11 +564,14 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
         Assert.Single(fx.Email.To(w.OwnerEmail));
     }
 
+    /// <summary>PostgreSQL keeps microseconds; a Linux clock has 100 ns ticks. Tests that compare a stored time with the clock must use whole microseconds.</summary>
+    static DateTimeOffset Micros(DateTimeOffset t) => new(t.Ticks - t.Ticks % 10, t.Offset);
+
     [Fact]
     public async Task A_failed_email_is_retried_later_with_a_delay_and_never_sent_twice_once_it_works()
     {
         var w = await NewWorld("retry");
-        var start = fx.Clock.Now = DateTimeOffset.UtcNow;
+        var start = fx.Clock.Now = Micros(DateTimeOffset.UtcNow);
         fx.Email.FailFor = to => to == w.OwnerEmail;
         await ReportClaim(w.A);
         var me = await UserId(w.Owner);
@@ -601,7 +604,7 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
     public async Task After_five_failures_it_gives_up_and_the_app_entry_remains()
     {
         var w = await NewWorld("giveup");
-        var start = fx.Clock.Now = DateTimeOffset.UtcNow;
+        var start = fx.Clock.Now = Micros(DateTimeOffset.UtcNow);
         fx.Email.FailFor = to => to == w.OwnerEmail;
         await ReportClaim(w.A);
         for (var i = 0; i < 8; i++) { fx.Clock.Now = start.AddHours(i * 2); await DispatchFor(w.OrgId); }
@@ -617,7 +620,7 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
     public async Task A_push_that_fails_is_retried_without_resending_the_email_and_a_gone_device_is_forgotten()
     {
         var w = await NewWorld("pushretry");
-        var start = fx.Clock.Now = DateTimeOffset.UtcNow;
+        var start = fx.Clock.Now = Micros(DateTimeOffset.UtcNow);
         var live = $"https://fcm.googleapis.com/fcm/send/{Guid.NewGuid():N}"; var dead = $"https://updates.push.services.mozilla.com/wpush/v2/{Guid.NewGuid():N}";
         await w.Owner.PostAsJsonAsync("/api/v1/notifications/push/subscriptions", new { endpoint = live, keys = new { p256dh = "k", auth = "a" } });
         await w.Owner.PostAsJsonAsync("/api/v1/notifications/push/subscriptions", new { endpoint = dead, keys = new { p256dh = "k", auth = "a" } });
@@ -639,7 +642,7 @@ public class Hito13Tests(NotificationsFixture fx) : IClassFixture<NotificationsF
     public async Task An_old_notification_is_not_emailed_but_stays_in_the_app()
     {
         var w = await NewWorld("stale");
-        var start = fx.Clock.Now = DateTimeOffset.UtcNow;
+        var start = fx.Clock.Now = Micros(DateTimeOffset.UtcNow);
         await ReportClaim(w.A);
         fx.Clock.Now = start.AddHours(49);                              // the worker was down for two days
         await DispatchFor(w.OrgId);
