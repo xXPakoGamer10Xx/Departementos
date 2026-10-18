@@ -193,15 +193,35 @@ export default function ChargesPage() {
           <ul className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
             {data.items.map((c) => (
               <li key={c.id} className="border-b border-rule last:border-b-0">
-                <div className={`grid items-center gap-x-4 gap-y-1 px-5 py-3.5 ${cols}`}>
+                {/* Phone: one compact card. Who and what on top, the three amounts side by side in a strip, so nothing wastes a line. */}
+                <div className="flex flex-col gap-2 px-4 py-3.5 md:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link href={`/tenants/${c.tenantId}`} className="block truncate text-[15px] font-medium hover:text-accent">{c.tenantName}</Link>
+                      <Link href={`/leases/${c.leaseId}`} className="block truncate text-sm text-ink-soft hover:text-accent"><span className="font-mono">{c.unitCode}</span> · {c.propertyName}</Link>
+                    </div>
+                    <Badge tone={chargeTone[c.status]}>{chargeStatusLabels[c.status]}</Badge>
+                  </div>
+                  <p className="text-sm">{c.description}{c.type === "Other" && <span className="text-ink-faint"> · manual</span>}{c.type === "Deposit" && <span className="text-ink-faint"> · en custodia</span>}
+                    <span className="text-ink-soft"> · vence {formatDate(c.dueDate)}</span></p>
+                  <dl className="grid grid-cols-3 gap-2 rounded-md bg-paper px-3 py-2 text-sm">
+                    <div><dt className="text-xs text-ink-soft">Importe</dt><dd className={c.status === "Voided" ? "text-ink-faint line-through" : "font-medium"}>{formatMoney(c.amount, currency)}</dd></div>
+                    <div><dt className="text-xs text-ink-soft">Pagado</dt><dd>{formatMoney(c.paidAmount, currency)}</dd></div>
+                    <div><dt className="text-xs text-ink-soft">Saldo</dt><dd className={c.status === "Overdue" ? "font-semibold text-stamp" : "font-medium"}>{formatMoney(c.balance, currency)}</dd></div>
+                  </dl>
+                  {canVoid && c.status !== "Voided" && c.status !== "Paid" && (
+                    <button className="self-end text-xs text-ink-soft underline hover:text-stamp" onClick={() => setVoiding(voiding === c.id ? null : c.id)}>Anular</button>
+                  )}
+                </div>
+                <div className={`hidden items-center gap-x-4 gap-y-1 px-5 py-3.5 md:grid ${cols}`}>
                   <div className="min-w-0">
                     <Link href={`/tenants/${c.tenantId}`} className="block truncate text-sm font-medium hover:text-accent hover:underline">{c.tenantName}</Link>
                     <Link href={`/leases/${c.leaseId}`} className="block truncate text-sm text-ink-soft hover:text-accent hover:underline"><span className="font-mono">{c.unitCode}</span> · {c.propertyName}</Link>
                   </div>
                   <p className="min-w-0 truncate text-sm">{c.description}{c.type === "Other" && <span className="text-ink-faint"> · manual</span>}{c.type === "Deposit" && <span className="text-ink-faint"> · en custodia</span>}</p>
-                  <p className="text-sm text-ink-soft"><span className="md:hidden">Vence: </span>{formatDate(c.dueDate)}</p>
-                  <p className={`text-sm md:text-right ${c.status === "Voided" ? "text-ink-faint line-through" : "font-medium"}`}><span className="font-normal text-ink-soft no-underline md:hidden">Importe: </span>{formatMoney(c.amount, currency)}</p>
-                  <p className={`text-sm md:text-right ${c.status === "Overdue" ? "font-semibold text-stamp" : ""}`}><span className="font-normal text-ink-soft md:hidden">Saldo: </span>{formatMoney(c.balance, currency)}
+                  <p className="text-sm text-ink-soft">{formatDate(c.dueDate)}</p>
+                  <p className={`text-sm md:text-right ${c.status === "Voided" ? "text-ink-faint line-through" : "font-medium"}`}>{formatMoney(c.amount, currency)}</p>
+                  <p className={`text-sm md:text-right ${c.status === "Overdue" ? "font-semibold text-stamp" : ""}`}>{formatMoney(c.balance, currency)}
                     {c.paidAmount > 0 && c.status !== "Paid" && c.status !== "Voided" && <span className="block text-xs font-normal text-ink-soft">Pagado {formatMoney(c.paidAmount, currency)}</span>}</p>
                   <div className="flex items-center justify-between gap-2">
                     <Badge tone={chargeTone[c.status]}>{chargeStatusLabels[c.status]}</Badge>
