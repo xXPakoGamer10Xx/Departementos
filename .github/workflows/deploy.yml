@@ -44,7 +44,7 @@ jobs:
           domain=$(grep -E '^DOMAIN=' .env.production | cut -d= -f2-)
           port=$(grep -E '^HTTP_PORT=' .env.production | cut -d= -f2-)
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Host: ${domain#http://}" "http://127.0.0.1:${port:-80}/" || true)
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Host: ${domain#http://}" "http://127.0.0.1:${port:-80}/login" || true)
             if [ "$code" = "200" ]; then echo "Aplicación respondiendo (HTTP $code)."; exit 0; fi
             echo "Intento $i: HTTP $code, reintentando..."; sleep 5
           done
