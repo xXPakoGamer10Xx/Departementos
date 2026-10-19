@@ -19,7 +19,7 @@ export function Wordmark() {
   return (
     <span className="inline-flex items-center gap-2.5">
       <BrandMark />
-      <span className="text-[17px] font-semibold tracking-tight">Habita</span>
+      <span className="text-[17px] font-semibold tracking-tight">NethRent</span>
     </span>
   );
 }

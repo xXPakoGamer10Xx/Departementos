@@ -1,4 +1,4 @@
-# Habita
+# NethRent
 
 > **Plataforma SaaS integral para la administración de propiedades en renta con control financiero auditable, inmutable y diseñado para el mercado mexicano.**
 
@@ -30,7 +30,7 @@
 
 ## 📖 Acerca del Proyecto
 
-**Habita** es una solución web y PWA diseñada para propietarios independientes y empresas administradoras de inmuebles. Su objetivo central es resolver de raíz la complejidad de la cobranza de rentas: **saber quién debe qué, registrar pagos completos y parciales con precisión milimétrica, y consultar saldos y vencimientos sin discrepancias**.
+**NethRent** es una solución web y PWA diseñada para propietarios independientes y empresas administradoras de inmuebles. Su objetivo central es resolver de raíz la complejidad de la cobranza de rentas: **saber quién debe qué, registrar pagos completos y parciales con precisión milimétrica, y consultar saldos y vencimientos sin discrepancias**.
 
 Elimina por completo la necesidad de mantener hojas de cálculo paralelas mediante un modelo contable de partida doble simplificada, no destructiva y 100% auditable.
 
@@ -317,5 +317,5 @@ La infraestructura de producción está contenerizada mediante `docker-compose.p
 ---
 
 <p align="center">
-  <b>Habita</b> — Claridad y exactitud en la administración de rentas.
+  <b>NethRent</b> — Claridad y exactitud en la administración de rentas.
 </p>

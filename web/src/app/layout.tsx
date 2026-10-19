@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Habita",
+  title: "NethRent",
   description: "Administración de propiedades en renta",
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Habita", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "NethRent", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = { themeColor: "#1d3fb8", width: "device-width", initialScale: 1 };

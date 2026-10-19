@@ -49,7 +49,7 @@ export default function ContractTemplatePage() {
       <div>
         <Link href="/settings" className="mb-3 inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink"><ArrowLeft size={14} aria-hidden /> Ajustes</Link>
         <h1 className="text-2xl font-semibold tracking-tight">Plantilla de contrato</h1>
-        <p className="mt-1 text-sm text-ink-soft">Tu contrato en Word, con campos como <code className="rounded bg-paper-deep px-1 font-mono text-xs">{"{{nombre_completo}}"}</code> que Habita llena con los datos de cada contrato.</p>
+        <p className="mt-1 text-sm text-ink-soft">Tu contrato en Word, con campos como <code className="rounded bg-paper-deep px-1 font-mono text-xs">{"{{nombre_completo}}"}</code> que NethRent llena con los datos de cada contrato.</p>
       </div>
       <SuccessMessage message={notice} />
       <ErrorMessage message={error ?? active.error?.message ?? null} />

@@ -45,7 +45,7 @@ export function AccessCodes() {
   }
 
   const link = created ? `${window.location.origin}/join?code=${created.code}` : "";
-  const message = created ? `Tu código para entrar a Habita: ${created.code}\n${link}` : "";
+  const message = created ? `Tu código para entrar a NethRent: ${created.code}\n${link}` : "";
 
   return (
     <Leaf>

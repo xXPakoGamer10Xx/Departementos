@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Habita",
-    short_name: "Habita",
+    name: "NethRent",
+    short_name: "NethRent",
     description: "Tu cuenta, tus pagos y tus reportes de mantenimiento.",
     lang: "es-MX",
     start_url: "/",

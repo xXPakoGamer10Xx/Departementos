@@ -100,7 +100,7 @@ function Preferences() {
         <SuccessMessage message={notice} />
         <ErrorMessage message={error ?? prefs.error?.message ?? null} />
         {push.data && !push.data.enabled && <p className="text-sm text-ink-soft">Este servidor aún no tiene activados los avisos en el dispositivo.</p>}
-        {push.data?.enabled && !pushSupported() && <p className="text-sm text-ink-soft">Este navegador no admite avisos en el dispositivo. En iPhone, instala primero Habita en tu pantalla de inicio (Compartir → Añadir a pantalla de inicio).</p>}
+        {push.data?.enabled && !pushSupported() && <p className="text-sm text-ink-soft">Este navegador no admite avisos en el dispositivo. En iPhone, instala primero NethRent en tu pantalla de inicio (Compartir → Añadir a pantalla de inicio).</p>}
         {push.data?.enabled && pushSupported() && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink-soft">{subscribed ? "Este dispositivo recibe avisos." : "Este dispositivo no recibe avisos."}</p>

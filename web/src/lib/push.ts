@@ -24,9 +24,9 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
 
 /** Asks permission, subscribes this device and registers it on the server. Throws an Error with a message fit for the person. */
 export async function enablePush(): Promise<void> {
-  if (!pushSupported()) throw new Error("Este navegador no admite avisos en el dispositivo. En iPhone, instala primero Habita en tu pantalla de inicio.");
+  if (!pushSupported()) throw new Error("Este navegador no admite avisos en el dispositivo. En iPhone, instala primero NethRent en tu pantalla de inicio.");
   const reg = await registration();
-  if (!reg) throw new Error("Los avisos en el dispositivo solo funcionan en la versión instalada de Habita.");
+  if (!reg) throw new Error("Los avisos en el dispositivo solo funcionan en la versión instalada de NethRent.");
   const config = await api<PushConfig>("/notifications/push/config");
   if (!config.enabled || !config.publicKey) throw new Error("Este servidor no tiene activados los avisos en el dispositivo.");
   if ((await Notification.requestPermission()) !== "granted") throw new Error("No diste permiso para mostrar avisos. Puedes activarlo en los ajustes del navegador.");
