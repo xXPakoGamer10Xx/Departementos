@@ -1,128 +1,321 @@
 # Habita
 
-SaaS de administración de propiedades en renta: propiedades y unidades, inquilinos, contratos, cargos, pagos, mantenimiento, reportes y auditoría.
-La fuente de verdad funcional es [Habita_SPEC.md](Habita_SPEC.md); las reglas aprobadas y pendientes de aprobar viven ahí.
+> **Plataforma SaaS integral para la administración de propiedades en renta con control financiero auditable, inmutable y diseñado para el mercado mexicano.**
 
-**Stack:** ASP.NET Core 10 (API) · EF Core + PostgreSQL 16 · Next.js 16 + TypeScript + Tailwind · Docker Compose (Caddy para HTTPS).
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ed?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Architecture Tests](https://img.shields.io/badge/Architecture-NetArchTest-green?style=flat-square)]()
+[![E2E Tests](https://img.shields.io/badge/E2E-Playwright-45ba4b?style=flat-square&logo=playwright)](https://playwright.dev/)
 
+---
+
+## 📌 Tabla de Contenidos
+
+- [Acerca del Proyecto](#-acerca-del-proyecto)
+- [Principios de Diseño y Filosofía Financiera](#-principios-de-diseño-y-filosofía-financiera)
+- [Arquitectura del Sistema](#-arquitectura-del-sistema)
+- [Módulos y Funcionalidades](#-módulos-y-funcionalidades)
+- [Matriz de Roles y Permisos (RBAC)](#-matriz-de-roles-y-permisos-rbac)
+- [Estructura del Repositorio](#-estructura-del-repositorio)
+- [Arranque Rápido para Desarrollo](#-arranque-rápido-para-desarrollo)
+- [Suite de Pruebas y Calidad de Código](#-suite-de-pruebas-y-calidad-de-código)
+- [Despliegue y Operación en Producción](#-despliegue-y-operación-en-producción)
+- [Seguridad y Protección de Datos](#-seguridad-y-protección-de-datos)
+- [Documentación Adicional](#-documentación-adicional)
+
+---
+
+## 📖 Acerca del Proyecto
+
+**Habita** es una solución web y PWA diseñada para propietarios independientes y empresas administradoras de inmuebles. Su objetivo central es resolver de raíz la complejidad de la cobranza de rentas: **saber quién debe qué, registrar pagos completos y parciales con precisión milimétrica, y consultar saldos y vencimientos sin discrepancias**.
+
+Elimina por completo la necesidad de mantener hojas de cálculo paralelas mediante un modelo contable de partida doble simplificada, no destructiva y 100% auditable.
+
+### Características Clave:
+* **Moneda e Idioma:** Español de México, moneda MXN (configurable por organización) y zonas horarias locales.
+* **Multi-inquilino (Multi-tenant):** Soporte de múltiples organizaciones por usuario con aislamiento estricto por base de datos y memoria.
+* **Motor de Documentos:** Generación de contratos en Word/PDF a partir de plantillas personalizadas, recibos con folios fiscales internos correlativos y estados de cuenta en PDF.
+* **Operación en Campo y Portal Inquilino:** Cobro en efectivo mediante códigos QR de un solo uso escaneables por cámara, reporte de comprobantes y portal PWA instalable para inquilinos.
+
+---
+
+## ⚖️ Principios de Diseño y Filosofía Financiera
+
+1. **Inmutabilidad Financiera:** Los pagos y cargos confirmados **nunca se editan ni se eliminan en silencio**. Cualquier corrección se realiza mediante reversos justificados que preservan la trazabilidad en la auditoría.
+2. **Aislamiento Multi-organización por Diseño:** La identidad autenticada determina la organización activa. Filtros globales en EF Core (`Global Query Filters`), interceptores de escritura y llaves foráneas compuestas en PostgreSQL impiden cualquier fuga de información entre inquilinos.
+3. **Dinero Exacto:** Cero tolerancia al redondeo inexacto por coma flotante (`float`/`double`). Todo importe monetario se maneja como `decimal` en C# y `numeric(14,2)` en PostgreSQL.
+4. **La API es la Autoridad:** El frontend refleja permisos para mejorar la experiencia de usuario, pero el 100% de las reglas de negocio, transiciones de estado y validaciones de seguridad se aplican en el backend ASP.NET Core.
+5. **Transacciones Atómicas e Idempotentes:** La aplicación de pagos en cascada a cargos vencidos se ejecuta en una única transacción de base de datos con bloqueo de filas para evitar duplicidades bajo concurrencia.
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+El proyecto sigue los principios de **Clean Architecture** (Arquitectura Limpia) y separación estricta de responsabilidades:
+
+```mermaid
+graph TD
+    subgraph Cliente ["Capa Cliente"]
+        Web["Next.js 16 (App Router + React 19)\nTypeScript + Tailwind v4\nPWA Inquilino"]
+    end
+
+    subgraph Proxy ["Infraestructura Externa"]
+        Caddy["Caddy Proxy\n(HTTPS automático / TLS / Compresión)"]
+    end
+
+    subgraph Backend ["Capa de Aplicación (.NET 10)"]
+        Api["Habita.Api\nMinimal APIs / Autenticación / Rate Limiting"]
+        Worker["Habita.Worker\nRecordatorios diarios / Web Push / Envío Correos"]
+        App["Habita.Application\nCasos de Uso / DTOs / Interfaces"]
+        Domain["Habita.Domain\nEntidades / Invariantes / Sin dependencias"]
+        Infra["Habita.Infrastructure\nEF Core 10 / Identity / PostgreSQL / Gotenberg Client"]
+    end
+
+    subgraph PersistenciaYServicios ["Servicios y Almacenamiento"]
+        Postgres[(PostgreSQL 16\nTriggers de Inmutabilidad\nBloqueos Fila)]
+        Gotenberg["Gotenberg 8\n(Conversión Headless Docx/HTML a PDF)"]
+        Mail["Mailpit / SMTP\n(Servidor de Correo)"]
+        Storage[("Almacén de Archivos\nComprobantes SHA-256")]
+    end
+
+    Web -->|HTTP / Cookies Seguras| Caddy
+    Caddy -->|Proxy Interno| Web
+    Caddy -->|Proxy Interno| Api
+    Api --> App
+    Worker --> App
+    App --> Domain
+    App --> Infra
+    Infra --> Postgres
+    Infra --> Gotenberg
+    Infra --> Storage
+    Worker --> Mail
+    Worker --> Postgres
 ```
-src/Habita.Domain          entidades, estados e invariantes (sin dependencias)
-src/Habita.Application     casos de uso, DTOs y contratos
-src/Habita.Infrastructure  EF Core, PostgreSQL, Identity, bloqueos de dinero
-src/Habita.Api             API HTTP, autorización, seguridad, comandos de operación
-src/Habita.Worker          recordatorios diarios y envío de avisos (correo y push)
-tests/                     unitarias, arquitectura e integración (PostgreSQL real con Testcontainers)
-web/                       interfaz Next.js
-ops/                       respaldo, prueba de restauración y Caddyfile
-PDF                        Gotenberg (contenedor): contratos, recibos y estados de cuenta
-docs/openapi.v1.json       contrato OpenAPI (instantánea de la API en Development)
-```
 
-## Arranque rápido
+### Límites Arquitectónicos Validados:
+* `Habita.Domain` no tiene dependencias de ningún otro proyecto del sistema ni de bibliotecas de base de datos.
+* `Habita.Application` depende exclusivamente de `Habita.Domain`.
+* `Habita.Infrastructure` implementa las interfaces de persistencia y servicios externos.
+* `Habita.Api` expone las Minimal APIs y gestiona la seguridad HTTP.
+* Todo lo anterior es verificado automáticamente en el build mediante pruebas de arquitectura (`Habita.ArchitectureTests`).
 
-```bash
-./dev.sh --seed     # DESARROLLO: PostgreSQL + Mailpit (Docker), API, worker y web; --seed crea los datos de demostración
-./start.sh          # PRODUCCIÓN con Docker Compose (HTTPS, respaldos); sin .env.production crea una prueba local
-```
+---
 
-`./dev.sh --stop` apaga PostgreSQL y Mailpit; `./start.sh --stop` apaga la producción y `./start.sh --logs` muestra sus logs. Ambos eligen un puerto libre si el habitual está ocupado y te dicen cuál.
-Para un servidor real, completa `.env.production` a partir de `.env.production.example` (ver *Producción*).
+## 🧩 Módulos y Funcionalidades
 
-## Desarrollo
-
-```bash
-cp .env.example .env                      # ajusta POSTGRES_PASSWORD (y POSTGRES_PORT si el 5432 está ocupado)
-docker compose up -d                      # PostgreSQL + Mailpit (correo de prueba en http://localhost:8025)
-dotnet run --project src/Habita.Api       # aplica las migraciones al arrancar (solo Development)
-cd web && pnpm install && pnpm dev        # http://localhost:3000
-```
-
-- API: `GET /health`. OpenAPI (solo Development): `/openapi/v1.json`.
-- Si el puerto de PostgreSQL no es el 5432, pasa `ConnectionStrings__Default="Host=localhost;Port=5434;Database=habita;Username=habita;Password=..."`.
-- Los enlaces de los correos usan `Web__BaseUrl` (por defecto `http://localhost:3000`).
-- **Contratos, recibos y estados de cuenta en PDF:** los hace Gotenberg, que `./dev.sh` levanta con Docker (la primera vez descarga su imagen, que es grande; el puerto aparece al arrancar). La plantilla de contrato se sube en *Ajustes → Plantilla de contrato* (hay un ejemplo descargable con todos los campos `{{así}}`). Sin Gotenberg el resto de Habita funciona; los PDF responden 503.
-- **Avisos y recordatorios:** los hace el worker (`dotnet run --project src/Habita.Worker`, ya incluido en `./dev.sh`). Los correos de aviso se ven en Mailpit. Los recordatorios corren una vez al día, a partir de la *hora de recordatorios* de *Ajustes*. Los avisos en el dispositivo (Web Push) son opcionales: `dotnet run --project src/Habita.Api -- --generate-vapid` imprime el par de llaves (`Push__VapidPublicKey`, `Push__VapidPrivateKey`, `Push__Subject`); además solo funcionan en la versión de producción (el service worker no se registra en desarrollo).
-
-### Pruebas
-
-```bash
-dotnet test Habita.sln        # unitarias, arquitectura e integración (PostgreSQL real con Testcontainers; requiere Docker)
-./web/e2e/run.sh              # extremo a extremo con Playwright en Chrome, sobre una pila temporal (ver web/e2e/README.md)
-```
-
-`tests/Habita.IntegrationTests/AuthorizationMatrix.txt` es la **matriz de autorización**: cada ruta de la API contra cada rol. La prueba falla si cualquier política cambia; si el cambio es intencional, regenera el archivo con `UPDATE_AUTH_MATRIX=1 dotnet test --filter AuthorizationMatrix` y revisa el diff antes de aprobarlo.
-
-### Datos de demostración
-
-```bash
-dotnet run --project src/Habita.Api -- --seed-demo
-```
-
-Crea datos **ficticios** del §14 del spec: *Residencial Demo* (Torre Norte, unidades 101/102/201, Ana Ejemplo y Luis Prueba, renta de $8,500 MXN)
-con un cargo vencido, uno parcialmente pagado, un pago revertido, un contrato terminado, un pago con saldo a favor, una incidencia, una cuenta bancaria, una promesa de pago y un reporte de pago del inquilino esperando revisión, más un usuario por rol
-y una segunda organización para probar UUID ajenos. Contraseña de todos los usuarios: `Habita-Demo-2026!`
-(`propietario@`, `admin@`, `finanzas@`, `mantenimiento@`, `lectura@`, `cobrador@demo.example`, y `ana@demo.example`, la inquilina Ana con acceso al portal). Es idempotente y **se niega a correr en producción**.
-
-### Pruebas y calidad
-
-```bash
-dotnet test                               # requiere Docker (Testcontainers levanta PostgreSQL)
-cd web && pnpm lint && pnpm exec tsc --noEmit
-```
-
-Migraciones: `dotnet ef migrations add <Nombre> -p src/Habita.Infrastructure -s src/Habita.Api -o Persistence/Migrations`.
-
-## Producción
-
-El stack completo está en `docker-compose.prod.yml`: **PostgreSQL** y **API** solo en red interna, **web** (Next.js), **Caddy** (único servicio que publica puertos, con certificados
-automáticos y redirección a HTTPS), un servicio de **respaldos** y un **worker** (recordatorios diarios y envío de correo y push; puede haber varias copias) y **Gotenberg** (PDF; solo red interna). El worker y la API salen a internet por una red aparte (`egress`) que no publica puertos: solo para correo y servicios push. Un trabajo `migrate` aplica las migraciones antes de arrancar la API.
-
-```bash
-cp .env.production.example .env.production      # completa TODOS los valores (dominio, contraseña de BD, SMTP, correo ACME)
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-```
-
-Requisitos: un dominio cuyo DNS apunte al servidor y los puertos 80 y 443 abiertos. Genera secretos con `openssl rand -hex 24` (sin `;` ni espacios en la contraseña de BD).
-La API **se niega a arrancar** en producción con una configuración insegura (contraseña de ejemplo, origen `http://`, `AllowedHosts=*`, tokens de invitación expuestos, sin SMTP, sin
-carpeta de claves escribible…) y lista cada problema. El primer usuario se crea en `/register` (queda como Owner de su organización); después invita al equipo desde *Miembros*.
-
-Actualizar: `git pull && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build` (las migraciones corren solas). Logs: `docker compose ... logs -f api`
-(JSON estructurado; solo llevan ids de organización y usuario, nunca nombres, correos ni cuerpos de solicitud).
-
-### Respaldos y restauración
-
-- **Automático:** el servicio `backup` hace un `pg_dump` **y un `.files.tar.gz` con los archivos subidos** (comprobantes de pago) cada `BACKUP_INTERVAL_HOURS` (24 por defecto) en `BACKUP_PATH`, valida que se puedan leer, guarda el SHA-256 de cada uno y borra los
-  de más de `BACKUP_RETENTION_DAYS` (14). Los archivos se respaldan *antes* que la base, así todo archivo que la base menciona ya está en el respaldo. Cada domingo restaura el último en una base temporal y verifica esquema, protecciones (incluidas las de cobranza, avisos, documentos y depósitos), totales y que **cada archivo subido que la base menciona esté en el respaldo con su huella SHA-256 intacta** (la **prueba de restauración**). Queda *unhealthy* si no hay un respaldo reciente.
-- **Manual:** `docker compose -f docker-compose.prod.yml --env-file .env.production exec backup bash /ops/backup.sh` y `... exec backup bash /ops/restore-test.sh [archivo]`.
-- **Recuperar de verdad** (la base actual se reemplaza): detén la API (`stop api web`), y
-  `docker compose ... exec -T backup bash -c 'pg_restore --clean --if-exists --no-owner -d "$PGDATABASE" /backups/<archivo>.dump'`; luego los archivos subidos con el mismo sello de tiempo:
-  `docker run --rm -v habita_files:/data/files -v "$BACKUP_PATH":/backups alpine tar -xzf /backups/<archivo>.files.tar.gz -C /data/files`; y `start api web`.
-- Copia los respaldos **fuera del servidor** (otra máquina o almacenamiento de objetos): un respaldo en el mismo disco no protege de perder el disco. Los archivos contienen datos personales y financieros; protégelos.
-
-### Operación
-
-| Comando | Qué hace |
+| Módulo | Descripción |
 |---|---|
-| `dotnet Habita.Api.dll --migrate` | Aplica migraciones y termina (lo usa el trabajo `migrate`). |
-| `dotnet Habita.Api.dll --seed-demo` | Datos de demostración. Solo Development. |
-| `dotnet Habita.Api.dll --generate-vapid` | Imprime un par de llaves VAPID para los avisos en el dispositivo. |
+| **Propiedades y Unidades** | Gestión jerárquica de inmuebles, torres y departamentos con control de estados (*Disponible*, *Ocupado*, *Mantenimiento*). |
+| **Inquilinos y Fiadores** | Expediente de inquilinos con validación y normalización de teléfonos/correos, notas y soporte de fiador legal en contratos. |
+| **Contratos (Leases)** | Ciclo de vida completo (*Borrador*, *Vigente*, *Terminado*, *Cancelado*), días de vencimiento válidos (1 al 28 para evitar anomalías en meses cortos) y control de vigencias solapadas. |
+| **Inventario de Entrega** | Checklist detallado de artículos y estado físico de la unidad entregada al inquilino con verificación en la entrega y devolución. |
+| **Cargos y Pagos** | Generación de rentas periódicas y cargos manuales. Aplicación automática FIFO en cascada, gestión de saldos a favor (overpayments) y reversos auditables. |
+| **Cobranza y Cuentas Bancarias** | Catálogo de cuentas bancarias de la organización (CLABE, banco, titular), promesas de pago con fecha límite y registro de motivos. |
+| **Validación de Comprobantes** | Los inquilinos suben comprobantes de pago. Los administradores los validan en vivo con previsualización del archivo adjunto antes de aplicar el pago. |
+| **Cobro en Efectivo con QR** | Cobradores en campo escanean códigos QR generados por inquilinos desde el portal. Códigos protegidos con vigencia de 4 horas y un solo uso. |
+| **Motor de Documentos (PDF)** | Generación de contratos Word/PDF mediante plantillas `.docx` con tags `{{campo}}`, recibos con folios fiscales únicos sin huecos y estados de cuenta en PDF. |
+| **Depósitos en Custodia** | Control contable de depósitos en garantía (no computan como ingreso ordinario). Liquidación final con descuentos (daños, adeudos) y reintegros. |
+| **Importación Asistida (CSV/Excel)** | Importación masiva de inquilinos y unidades en dos fases: Previsualización validada y Confirmación protegida con hash criptográfico. |
+| **Mantenimiento e Incidencias** | Reporte y seguimiento de incidencias con fotografías, prioridades y notas de resolución. Rol de mantenimiento estrictamente ciego a datos financieros. |
+| **Portal del Inquilino (PWA)** | Portal móvil instalable para inquilinos: consulta de adeudos, comprobantes de pago, solicitudes de mantenimiento y QR de pago en efectivo. |
+| **Notificaciones y Worker** | Tareas programadas en background: recordatorios automáticos de vencimiento por correo y Web Push (VAPID) ajustados a la hora y zona horaria local. |
 
-## Seguridad: qué está aplicado
+---
 
-- **Aislamiento por organización** en cada consulta (filtro global), en cada escritura (interceptor) y en la base (llaves foráneas compuestas). Un recurso ajeno responde 404.
-- **Autorización en el servidor** por rol; Maintenance nunca recibe datos financieros ni de inquilinos.
-- **Sesión:** cookie `HttpOnly`, `SameSite=Lax` y `Secure` en producción; bloqueo de cuenta tras 5 contraseñas fallidas; límite de intentos por IP en login, recuperación, invitaciones y registro (429 con `Retry-After`).
-- **CSRF:** `SameSite` más verificación del encabezado `Origin` en solicitudes que modifican datos.
-- **Cabeceras:** HSTS, CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cache-Control: no-store` en la API. Límite de 1 MB por solicitud.
-- **Dinero:** `numeric` en PostgreSQL, transacciones con bloqueo de filas, idempotencia en pagos y triggers que impiden editar o borrar pagos, aplicaciones, auditoría e historial de incidencias.
-- **Archivos subidos:** tipo detectado por contenido, 5 MB, nombre aleatorio, descarga como adjunto, y un tope de 200 archivos por persona cada 24 horas además del límite por minuto.
-- **Cobranza:** los reportes de pago atendidos y los códigos de efectivo usados no se modifican ni se borran (disparadores); confirmar un reporte o cobrar con un código es atómico y no duplica pagos aunque lleguen solicitudes simultáneas; los códigos de efectivo vencen en 4 horas, son de un solo uso y solo funcionan con sesión de personal. La cámara solo se permite al propio origen para escanear.
-- **Documentos:** los contratos generados, los folios de recibo y las plantillas no se modifican ni se borran (disparadores); cada contrato es una versión nueva con su huella SHA-256. Los folios se asignan dentro de la transacción del pago (únicos y sin huecos). Las plantillas Word subidas se revisan antes de abrirlas (macros, objetos incrustados, enlaces externos, bombas zip) y Gotenberg corre en la red interna, sin internet ni puerto publicado.
-- **Depósitos e importación:** las liquidaciones de depósito y sus descuentos no se modifican ni se borran (disparadores; solo se anulan con motivo); el depósito cobrado es custodia y no cuenta como ingreso; el Excel/CSV importado se revisa con una vista previa, se valida contra macros, objetos incrustados, enlaces externos y bombas zip, se guarda en una sola transacción y **nunca se conserva**. La auditoría registra solo cantidades.
-- **CSV:** neutralización de fórmulas (inyección en Excel) y registro en la auditoría de cada exportación.
-- **Contenedores:** API y web sin privilegios, sistema de archivos de solo lectura, sin capacidades, red interna para la base de datos.
+## 👥 Matriz de Roles y Permisos (RBAC)
 
-### Antes de usarlo con cobros reales
+La plataforma aplica autorización estricta en el servidor para 7 roles diferenciados:
 
-Habita_SPEC.md §15 lista las decisiones de negocio que **deben aprobarse** (prorrateo, depósito, mora, comprobantes fiscales, retención de datos, notificaciones…) y el resumen de lo implementado por defecto.
-Esto no es asesoría fiscal ni legal. Pendientes técnicos conocidos: CSP basada en *nonces* (hoy permite `unsafe-inline` por Next.js), SPF/DKIM del dominio de correo, y pruebas de carga.
+| Rol | Propiedades y Contratos | Cargos y Pagos | Mantenimiento | Cobro QR Campo | Usuarios y Ajustes | Portal Inquilino |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Owner** | Completo | Completo | Completo | Sí | Completo (Traspaso Org) | No |
+| **Admin** | Completo | Completo | Completo | Sí | Gestión de Miembros | No |
+| **Finance** | Lectura | Completo | No | Sí | No | No |
+| **Maintenance** | Solo Unidades | **Sin Acceso** | Completo | No | No | No |
+| **Collector** | Lectura básica | Solo QR Efectivo | No | **Especialista** | No | No |
+| **ReadOnly** | Lectura | Lectura | Lectura | No | No | No |
+| **Tenant** | Su Contrato | Sus Pagos/Adeudos | Reportar Falla | Su QR de Pago | Solo Perfil | **Sí (PWA)** |
+
+> 🔒 *La matriz de autorización se valida en cada compilación contra `tests/Habita.IntegrationTests/AuthorizationMatrix.txt`.*
+
+---
+
+## 📂 Estructura del Repositorio
+
+```text
+.
+├── src/
+│   ├── Habita.Domain/          # Entidades de dominio, invariantes, enums y reglas puras
+│   ├── Habita.Application/     # Casos de uso, DTOs, validadores y contratos de servicio
+│   ├── Habita.Infrastructure/  # EF Core, PostgreSQL, Gotenberg, Identity y Almacenamiento
+│   ├── Habita.Api/             # Minimal APIs HTTP, middleware de seguridad y configuración
+│   └── Habita.Worker/          # Servicio en segundo plano (recordatorios, colas, correos)
+├── web/                        # Frontend Next.js 16, React 19, TypeScript y Tailwind v4
+│   ├── src/app/                # App Router: rutas administrativas y portal de inquilinos
+│   ├── src/components/         # Componentes UI (diseño inspirado en recibos y libro contable)
+│   └── e2e/                    # Pruebas End-to-End con Playwright
+├── tests/
+│   ├── Habita.UnitTests/       # Pruebas unitarias de reglas de dominio y lógica de aplicación
+│   ├── Habita.ArchitectureTests/ # Pruebas de dependencias de capas con NetArchTest
+│   └── Habita.IntegrationTests/  # Pruebas de integración con PostgreSQL real (Testcontainers)
+├── ops/                        # Caddyfile, scripts de respaldo automatizado y prueba de restauración
+├── docs/                       # Especificaciones OpenAPI (openapi.v1.json)
+├── dev.sh                      # Orquestador del entorno de desarrollo local con Docker
+├── start.sh                    # Orquestador para ejecución local de producción o servidor
+├── docker-compose.yml          # Servicios auxiliares de desarrollo (Postgres, Gotenberg, Mailpit)
+└── docker-compose.prod.yml     # Pila completa de producción (Caddy, API, Web, Worker, Backups)
+```
+
+---
+
+## 🚀 Arranque Rápido para Desarrollo
+
+### Requisitos Previos:
+- [Docker](https://www.docker.com/) y Docker Desktop en ejecución.
+- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- [Node.js](https://nodejs.org/) (v20+) y [pnpm](https://pnpm.io/)
+- Utilidades estándar: `curl`, `lsof`
+
+### Iniciar el Entorno con un Solo Comando:
+
+```bash
+./dev.sh --seed
+```
+
+Este script automatizado realiza lo siguiente:
+1. Copia `.env.example` a `.env` si no existe.
+2. Detecta puertos libres automáticamente si los puertos por defecto (5432, 3000, 5222, 3010) están ocupados.
+3. Levanta los contenedores de **PostgreSQL 16**, **Mailpit** y **Gotenberg 8**.
+4. Aplica las migraciones de Entity Framework Core de forma automática.
+5. Inicia la **API ASP.NET Core** y el **Worker de notificaciones**.
+6. Con la bandera `--seed`, crea la organización de demostración con contratos, incidencias, cargos y usuarios de prueba.
+7. Instala dependencias e inicia el servidor de desarrollo de **Next.js** en `http://localhost:3000`.
+
+### Otros Comandos de Desarrollo:
+```bash
+./dev.sh          # Inicia el entorno sin regenerar datos de demostración
+./dev.sh --stop   # Apaga los contenedores Docker (conservando la base de datos)
+```
+
+### URLs del Entorno Local:
+* **Aplicación Web:** [http://localhost:3000](http://localhost:3000)
+* **API Health Check:** `http://localhost:5222/health`
+* **Especificación OpenAPI (Swagger):** `http://localhost:5222/openapi/v1.json`
+* **Bandeja de Correo de Pruebas (Mailpit):** [http://localhost:8025](http://localhost:8025)
+
+### Credenciales de Demostración (`--seed`):
+Todos los usuarios demo comparten la contraseña: `Habita-Demo-2026!`
+
+| Rol | Correo Electrónico |
+|---|---|
+| **Propietario (Owner)** | `propietario@demo.example` |
+| **Administrador (Admin)** | `admin@demo.example` |
+| **Finanzas (Finance)** | `finanzas@demo.example` |
+| **Mantenimiento (Maintenance)** | `mantenimiento@demo.example` |
+| **Cobrador en Campo (Collector)** | `cobrador@demo.example` |
+| **Solo Lectura (ReadOnly)** | `lectura@demo.example` |
+| **Inquilina (Portal PWA)** | `ana@demo.example` |
+
+---
+
+## 🧪 Suite de Pruebas y Calidad de Código
+
+### 1. Pruebas Backend (.NET):
+Requiere Docker en ejecución para que **Testcontainers** cree instancias efímeras de PostgreSQL:
+```bash
+# Ejecutar todas las pruebas unitarias, de arquitectura e integración
+dotnet test Habita.sln
+
+# Actualizar la matriz de autorización si se realizaron cambios intencionales en rutas/roles
+UPDATE_AUTH_MATRIX=1 dotnet test --filter AuthorizationMatrix
+```
+
+### 2. Pruebas Frontend y Tipado:
+```bash
+cd web
+pnpm lint
+pnpm exec tsc --noEmit
+```
+
+### 3. Pruebas de Extremo a Extremo (E2E con Playwright):
+Ejecuta flujos reales en Google Chrome contra una base de datos e instancia limpia:
+```bash
+# Levantar PostgreSQL de soporte
+docker compose up -d postgres
+
+# Ejecutar todos los tests E2E
+./web/e2e/run.sh
+
+# Ejecutar un test E2E específico
+./web/e2e/run.sh claim.spec.ts
+```
+
+---
+
+## 🚢 Despliegue y Operación en Producción
+
+La infraestructura de producción está contenerizada mediante `docker-compose.prod.yml` con aislamiento en capas:
+
+### Despliegue en Servidor:
+1. Copiar y completar variables de entorno:
+   ```bash
+   cp .env.production.example .env.production
+   # Editar dominio, credenciales SMTP, contraseñas de BD y correo para certificados SSL
+   ```
+2. Iniciar el stack completo:
+   ```bash
+   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+   ```
+   *(O utilizar `./start.sh` que incluye comprobaciones previas automáticas y modo de prueba local).*
+
+### Estrategia de Redes Seguras:
+* **Red `internal`:** PostgreSQL, API, Worker, Gotenberg y Backup interactúan sin exponer puertos al exterior.
+* **Red `egress`:** Red aislada sin puertos entrantes para que la API y el Worker puedan enviar correos (SMTP) y notificaciones Web Push.
+* **Red Pública:** Caddy es el **único servicio** con puertos expuestos (80 y 443), gestionando certificados SSL/TLS automáticos con Let's Encrypt o ZeroSSL.
+
+### Sistema de Respaldo y Restauración Probada:
+* **Respaldos Automáticos:** El contenedor `backup` genera cada 24 horas un volcado `pg_dump` y un archivo `.files.tar.gz` con comprobantes físicos, calculando sus huellas SHA-256.
+* **Prueba Semanal de Restauración:** Cada semana se ejecuta automáticamente `ops/restore-test.sh` restaurando el último respaldo en una base temporal para certificar su integridad estructural y consistencia de archivos.
+* **Comandos de Respaldo Manual:**
+  ```bash
+  # Ejecutar respaldo inmediato
+  docker compose -f docker-compose.prod.yml --env-file .env.production exec backup bash /ops/backup.sh
+
+  # Ejecutar prueba de verificación de restauración
+  docker compose -f docker-compose.prod.yml --env-file .env.production exec backup bash /ops/restore-test.sh
+  ```
+
+---
+
+## 🛡️ Seguridad y Protección de Datos
+
+* **Protección de Sesión:** Cookies de autenticación `HttpOnly`, `SameSite=Lax` y `Secure`. Bloqueo automático de cuentas tras 5 intentos fallidos consecutivos.
+* **Límite de Solicitudes (Rate Limiting):** Limitador por IP en inicio de sesión, recuperación de contraseña, invitaciones y carga de archivos, devolviendo código `429` con cabecera `Retry-After`.
+* **Protección Anti-CSRF:** Validación estricta del encabezado `Origin` en solicitudes mutativas y políticas de cookies.
+* **Cabeceras de Endurecimiento:** HSTS forzado, CSP (Content Security Policy), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, y `Cache-Control: no-store` en respuestas sensibles.
+* **Protección de Archivos:**
+  - Inspección de contenido real de archivos subidos (no se confía en la extensión).
+  - Límite estricto de 5 MB por archivo.
+  - Almacenamiento con identificadores criptográficos aleatorios.
+  - Análisis de plantillas Word contra macros, objetos incrustados, hipervínculos externos maliciosos y bombas ZIP.
+* **Neutralización de Inyección de Fórmulas CSV:** En todas las exportaciones a Excel/CSV, caracteres de fórmula (`=`, `+`, `-`, `@`) son neutralizados anteponiendo comillas simples.
+* **Contenedores de Mínimo Privilegio:** Contenedores ejecutados como usuario sin privilegios (`non-root`), sistemas de archivos en modo solo lectura (`read_only: true`), `tmpfs` efímero y eliminación de capacidades del kernel (`cap_drop: [ALL]`).
+
+---
+
+## 📚 Documentación Adicional
+
+* **[Habita_SPEC.md](Habita_SPEC.md):** Especificación funcional exhaustiva, reglas de negocio detalladas y criterios de aceptación (Fuente de verdad del sistema).
+* **[PRODUCT.md](PRODUCT.md):** Definición de producto, usuarios objetivo, propuesta de valor y restricciones.
+* **[DESIGN.md](DESIGN.md):** Sistema de diseño, paleta de colores ("talonario contable"), tipografía Geist y espaciados.
+* **[docs/openapi.v1.json](docs/openapi.v1.json):** Contrato OpenAPI tipado de la API REST.
+* **[web/e2e/README.md](web/e2e/README.md):** Guía de ejecución y cobertura de pruebas de extremo a extremo.
+
+---
+
+<p align="center">
+  <b>Habita</b> — Claridad y exactitud en la administración de rentas.
+</p>
