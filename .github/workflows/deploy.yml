@@ -6,38 +6,53 @@ on:
       - main
   workflow_dispatch:
 
+# Un solo despliegue a la vez; si llega otro push, espera a que termine el actual.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Despliegue en Servidor de Producción
-    runs-on: ubuntu-latest
+    name: Despliegue en el servidor
+    # Runner propio instalado en el servidor (etiqueta "habita"): no hace falta abrir SSH a internet ni guardar llaves en GitHub.
+    runs-on: [self-hosted, habita]
+    timeout-minutes: 30
+    env:
+      PROJECT_DIR: /home/server/Departamentos
+      COMPOSE: docker compose -f docker-compose.prod.yml --env-file .env.production
     steps:
-      - name: Verificar configuración de secretos
+      - name: Obtener los últimos cambios de main
         run: |
-          if [ -z "${{ secrets.SERVER_HOST }}" ] || [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
-            echo "::error::Faltan los secretos SERVER_HOST o SERVER_SSH_KEY en GitHub Secrets."
-            echo "Para configurar el despliegue automático, agrega estos secretos en Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
+          cd "$PROJECT_DIR"
+          git fetch origin main
+          git merge --ff-only origin/main
 
-      - name: Desplegar mediante SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script_stop: true
-          script: |
-            echo "Accediendo al directorio del proyecto..."
-            cd ${{ secrets.SERVER_PROJECT_PATH || '/opt/habita' }}
-            
-            echo "Obteniendo los últimos cambios de main..."
-            git pull origin main
-            
-            echo "Reconstruyendo y levantando contenedores con docker-compose.prod.yml..."
-            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-            
-            echo "Limpiando imágenes antiguas en desuso..."
-            docker image prune -f
-            
-            echo "¡Despliegue completado con éxito!"
+      - name: Construir imágenes (una por una, el servidor tiene poca memoria)
+        run: |
+          cd "$PROJECT_DIR"
+          COMPOSE_PARALLEL_LIMIT=1 nice -n 19 $COMPOSE build
+
+      - name: Levantar contenedores (aplica migraciones antes de iniciar la API)
+        run: |
+          cd "$PROJECT_DIR"
+          $COMPOSE up -d --remove-orphans
+
+      - name: Comprobar que la aplicación responde
+        run: |
+          cd "$PROJECT_DIR"
+          set -e
+          domain=$(grep -E '^DOMAIN=' .env.production | cut -d= -f2-)
+          port=$(grep -E '^HTTP_PORT=' .env.production | cut -d= -f2-)
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Host: ${domain#http://}" "http://127.0.0.1:${port:-80}/" || true)
+            if [ "$code" = "200" ]; then echo "Aplicación respondiendo (HTTP $code)."; exit 0; fi
+            echo "Intento $i: HTTP $code, reintentando..."; sleep 5
+          done
+          echo "::error::La aplicación no respondió tras el despliegue."
+          $COMPOSE ps
+          $COMPOSE logs --tail 40 api web proxy
+          exit 1
+
+      - name: Limpiar imágenes en desuso
+        if: success()
+        run: docker image prune -f
